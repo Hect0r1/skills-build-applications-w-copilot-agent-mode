@@ -16,6 +16,11 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+import os
+
+CODESPACE_NAME = os.environ.get('CODESPACE_NAME')
+BASE_URL = f'https://{CODESPACE_NAME}-8000.app.github.dev' if CODESPACE_NAME else ''
+
 from rest_framework import routers
 from . import views
 from rest_framework.response import Response
@@ -31,6 +36,18 @@ router.register(r'leaderboard', views.LeaderboardViewSet)
 
 @api_view(['GET'])
 def api_root(request, format=None):
+    # Si estamos en Codespaces, construir URLs públicas hacia el dominio de Codespaces
+    if CODESPACE_NAME:
+        base = f'https://{CODESPACE_NAME}-8000.app.github.dev/api/'
+        return Response({
+            'users': f'{base}users/',
+            'teams': f'{base}teams/',
+            'activities': f'{base}activities/',
+            'workouts': f'{base}workouts/',
+            'leaderboard': f'{base}leaderboard/',
+        })
+
+    # En otros entornos (ej. localhost) usar build_absolute_uri
     return Response({
         'users': request.build_absolute_uri('users/'),
         'teams': request.build_absolute_uri('teams/'),
@@ -41,6 +58,7 @@ def api_root(request, format=None):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Exponer todas las rutas del router bajo /api/
     path('api/', include((router.urls, 'api'))),
     path('', api_root, name='api-root'),
 ]
